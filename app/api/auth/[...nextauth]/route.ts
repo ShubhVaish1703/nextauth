@@ -1,6 +1,8 @@
 import NextAuth from "next-auth/next"
 import CredentialsProvider from "next-auth/providers/credentials"
-import { users } from './../../../../helpers/constants';
+import { connectToDatabase } from '@/helpers/server-helpers';
+import prisma from './../../../../prisma/index';
+import bcrypt from 'bcrypt';
 
 export const authOptions = {
     providers: [
@@ -13,11 +15,30 @@ export const authOptions = {
             async authorize(credentials, req) {
                 if (!credentials || !credentials.email || !credentials.password) return null;
 
-                const user = users.find((item) => item.email === credentials.email)
-                if (user?.password === credentials.password) {
-                    return user;
+                try {
+                    await connectToDatabase();
+                    const user = await prisma.user.findFirst({ where: { email: credentials.email } });
+                    if (!user) {
+                        return null;
+                    }
+
+                    if (!user?.hashedPassword) {
+                        return null;
+                    }
+
+                    const isPasswordCorrect = await bcrypt.compare(credentials.password, user.hashedPassword)
+                    if(isPasswordCorrect){
+                        return user;
+                    }
+
+                    return null;
+
+                } catch (error) {
+                    console.log(error);
+                    return null;
+                } finally {
+                    await prisma.$disconnect();
                 }
-                return null;
             },
         })
     ],

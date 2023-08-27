@@ -4,7 +4,7 @@ import { connectToDatabase } from '@/helpers/server-helpers';
 import prisma from './../../../../prisma/index';
 import bcrypt from 'bcrypt';
 
-export const authOptions = {
+const authOptions = {
     providers: [
         CredentialsProvider({
             name: 'creds',
